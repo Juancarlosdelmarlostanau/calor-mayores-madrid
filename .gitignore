@@ -1,0 +1,3 @@
+# Jupyter and Python temporary files
+.ipynb_checkpoints/
+__pycache__/
