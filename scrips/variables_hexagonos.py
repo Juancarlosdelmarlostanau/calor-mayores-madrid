@@ -19,6 +19,7 @@ AREA_MINIMA_PARQUE_HA = 1
 CODIGOS_VIARIO = ["12210", "12220"]
 CODIGO_FERROCARRIL = "12230"
 CODIGO_AGUA = "50000"
+CODIGOS_SUELO_DESNUDO = ["13100", "13300", "13400", "12400"]
 
 RUTA_TERMINO = RUTA_RAW + "limites/Termino_municipal/TERMINO_MUNICIPAL.shp"
 RUTA_BARRIOS = RUTA_RAW + "limites/Barrios/BARRIOS.shp"
@@ -209,7 +210,13 @@ def agregar_entorno(hexagonos):
     distancias_agua = distancias_agua.drop_duplicates(subset="h3")
     hexagonos = hexagonos.merge(distancias_agua[["h3", "dist_agua"]], on="h3", how="left")
     hexagonos["dist_agua"] = hexagonos["dist_agua"].round(1)
-    return hexagonos
+    
+    suelo_desnudo = usos[usos["code_2021"].isin(CODIGOS_SUELO_DESNUDO)][["geometry"]]
+    suelo_trozos = gpd.overlay(suelo_desnudo, hexagonos_base, how="intersection")
+    suelo_trozos["area_suelo"] = suelo_trozos.area
+    hexagonos = hexagonos.merge(suelo_trozos.groupby("h3")[["area_suelo"]].sum(), on="h3", how="left")
+    hexagonos["pct_suelo_desnudo"] = (hexagonos["area_suelo"].fillna(0) / hexagonos.area * 100).round(2)
+    return hexagonos.drop(columns=["area_suelo"])
 
 
 def crear_tabla_hexagonos():
