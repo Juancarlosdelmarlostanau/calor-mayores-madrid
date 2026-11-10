@@ -13,11 +13,11 @@ CARPETA_APP = os.path.dirname(os.path.abspath(__file__))
 RUTA_CLEAN = os.path.join(CARPETA_APP, "..", "clean", "")
 COLORES_PRIORIDAD = {"alta": "red", "media": "orange", "baja": "#ffe680"}
 TEXTO_MEDIDA = {
-    "vegetacion": "Más vegetación",
-    "suelo_desnudo": "Cubrir el suelo desnudo",
-    "edificios": "Edificios y cubiertas",
-    "parques": "Acercar un parque",
-    "ninguna": "Ninguna palanca urbana (servicios)"
+    "vegetacion": "Plantar áboles",
+    "suelo_desnudo": "Ajardinar solares y descampados",
+    "edificios": "Tejados frescos (claros o verdes)",
+    "parques": "Creacion de parque cercano",
+    "ninguna": "Servicios(refugios, fuentes)"
 }
 
 st.set_page_config(page_title="Calor y mayores en Madrid", layout="wide")
@@ -82,6 +82,24 @@ with tab_resumen:
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
             attr="Esri, World Light Gray Canvas"
         )
+        folium.TileLayer(
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+            attr="Esri",
+            overlay=True
+        ).add_to(mapa)
+
+        distritos_wgs84 = distritos.to_crs(epsg=4326)
+        folium.GeoJson(
+            distritos_wgs84[["NOMBRE", "geometry"]],
+            style_function=lambda elemento: {"color": "#666666", "weight": 1, "fillOpacity": 0},
+            tooltip=folium.GeoJsonTooltip(fields=["NOMBRE"], aliases=["Distrito:"])
+        ).add_to(mapa)
+
+        limite_madrid = gpd.GeoDataFrame(geometry=[distritos_wgs84.union_all()], crs="EPSG:4326")
+        folium.GeoJson(
+            limite_madrid,
+            style_function=lambda elemento: {"color": "#222222", "weight": 2.5, "fillOpacity": 0}
+        ).add_to(mapa)
         for _, centro in filtrado.to_crs(epsg=4326).iterrows():
             ficha = (f"<b>{centro['nombre']}</b><br>"
                      f"Tipo: {centro['tipo_centro']}<br>"
@@ -90,7 +108,7 @@ with tab_resumen:
                      f"Medida recomendada: {centro['medida_texto']}")
             folium.CircleMarker(
                 location=[centro.geometry.y, centro.geometry.x],
-                radius=6,
+                radius=4.5,
                 color="dimgrey",
                 weight=1,
                 fill=True,
