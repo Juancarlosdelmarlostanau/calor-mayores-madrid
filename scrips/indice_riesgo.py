@@ -5,11 +5,11 @@ import glob
 import geopandas as gpd
 import networkx as nx
 import numpy as np
+import osmnx as ox
 import pandas as pd
 
 from config import RUTA_RAW, RUTA_CLEAN, CRS_PROYECTO
 from isocronas import cargar_red, nodos_de_salida
-import osmnx as ox
 
 LIMITE_SERVICIOS = 1000
 ESCALA_TIPO = {"residencia": 1.0, "centro de día": 0.75, "vivienda tutelada": 0.5, "centro de mayores": 0.25}
@@ -19,34 +19,49 @@ TIPOS_SALUD = {
 }
 
 
+def crear_direccion(tabla):
+    """Une el tipo de vía, el nombre de la vía y el número en una dirección legible."""
+    clase = tabla["CLASE-VIAL"].fillna("").astype(str).str.capitalize()
+    via = tabla["NOMBRE-VIA"].fillna("").astype(str).str.title()
+    numero = tabla["NUM"].fillna("").astype(str).str.replace(".0", "", regex=False)
+    return (clase + " " + via + ", " + numero).str.strip(" ,")
+
+
 def cargar_servicios(centros):
-    """Carga y filtra las fuentes, los centros de salud y los refugios (centros de mayores y mercados)."""
+    """Carga y filtra las fuentes, los centros de salud y los refugios (centros de mayores y mercados), con su nombre y dirección."""
     fuentes = pd.read_csv(glob.glob(RUTA_RAW + "fuentes/*.csv")[0], sep=";", encoding="utf-8")
     fuentes = fuentes[(fuentes["ESTADO"] == "OPERATIVO") & (fuentes["USO"].isin(["PERSONAS", "PERSONAS_Y_MASCOTAS"]))]
     fuentes = gpd.GeoDataFrame(fuentes[["ID", "UBICACION"]].copy(),
                                geometry=gpd.points_from_xy(fuentes["COORD_GIS_X"], fuentes["COORD_GIS_Y"]),
                                crs=CRS_PROYECTO)
+    fuentes["nombre_servicio"] = "Fuente de agua"
+    fuentes["direccion"] = fuentes["UBICACION"]
 
     salud = pd.read_csv(glob.glob(RUTA_RAW + "centrosalud/*.csv")[0], sep=";", encoding="latin-1")
     salud = salud[salud["TIPO"].isin(TIPOS_SALUD.keys())].copy()
     salud["tipo_salud"] = salud["TIPO"].map(TIPOS_SALUD)
     salud = salud.dropna(subset=["COORDENADA-X", "COORDENADA-Y"])
-    salud = gpd.GeoDataFrame(salud[["PK", "NOMBRE", "tipo_salud"]].copy(),
+    salud["direccion"] = crear_direccion(salud)
+    salud = gpd.GeoDataFrame(salud[["PK", "NOMBRE", "tipo_salud", "direccion"]].copy(),
                              geometry=gpd.points_from_xy(salud["COORDENADA-X"], salud["COORDENADA-Y"]),
                              crs=CRS_PROYECTO)
+    salud["nombre_servicio"] = salud["NOMBRE"]
 
     mercados = pd.read_csv(glob.glob(RUTA_RAW + "mercados/*.csv")[0], sep=";", encoding="latin-1")
-    mercados = mercados.dropna(subset=["COORDENADA-X", "COORDENADA-Y"])
-    mercados = gpd.GeoDataFrame(mercados[["PK", "NOMBRE"]].copy(),
+    mercados = mercados.dropna(subset=["COORDENADA-X", "COORDENADA-Y"]).copy()
+    mercados["direccion"] = crear_direccion(mercados)
+    mercados = gpd.GeoDataFrame(mercados[["PK", "NOMBRE", "direccion"]].copy(),
                                 geometry=gpd.points_from_xy(mercados["COORDENADA-X"], mercados["COORDENADA-Y"]),
                                 crs=CRS_PROYECTO)
 
     refugios_mayores = centros[centros["tipo_centro"] == "centro de mayores"][["codigo", "nombre", "geometry"]].copy()
     refugios_mayores["tipo_refugio"] = "centro de mayores"
+    refugios_mayores["direccion"] = ""
     refugios_mercados = mercados.rename(columns={"PK": "codigo", "NOMBRE": "nombre"})
     refugios_mercados["tipo_refugio"] = "mercado"
     refugios = pd.concat([refugios_mayores, refugios_mercados], ignore_index=True)
     refugios["codigo"] = refugios["codigo"].astype(str)
+    refugios["nombre_servicio"] = refugios["nombre"]
     return fuentes, salud, refugios
 
 
@@ -99,31 +114,34 @@ def distancias_desde_puerta(punto, limite, red, nodos):
     return alcanzados
 
 
+def servicio_mas_cercano(servicios, alcanzados):
+    """Devuelve la distancia andando, el nombre y la dirección del servicio más cercano entre los cruces alcanzados."""
+    cercanos = servicios[servicios["nodo"].isin(list(alcanzados))].copy()
+    if len(cercanos) == 0:
+        return np.nan, None, None
+    cercanos["distancia"] = cercanos["nodo"].map(alcanzados)
+    mas_cercano = cercanos.sort_values("distancia").iloc[0]
+    return mas_cercano["distancia"], mas_cercano["nombre_servicio"], mas_cercano["direccion"]
+
+
 def agregar_distancias(indice, fuentes, salud, refugios, red, nodos):
-    """Añade la distancia andando desde cada centro a la fuente, el refugio y el centro sanitario más cercanos."""
+    """Añade la distancia andando, el nombre y la dirección de la fuente, el refugio y el centro sanitario más cercanos."""
     indice["nodo"] = ox.distance.nearest_nodes(red, X=indice.geometry.x, Y=indice.geometry.y)
     fuentes["nodo"] = ox.distance.nearest_nodes(red, X=fuentes.geometry.x, Y=fuentes.geometry.y)
     salud["nodo"] = ox.distance.nearest_nodes(red, X=salud.geometry.x, Y=salud.geometry.y)
     refugios["nodo"] = ox.distance.nearest_nodes(red, X=refugios.geometry.x, Y=refugios.geometry.y)
-    nodos_fuentes = set(fuentes["nodo"])
-    nodos_salud = set(salud["nodo"])
 
-    dist_agua, dist_refugio, dist_salud = [], [], []
+    resultados = {"agua": [], "refugio": [], "salud": []}
     for codigo, punto in zip(indice["codigo"], indice.geometry):
         alcanzados = distancias_desde_puerta(punto, LIMITE_SERVICIOS, red, nodos)
+        otros_refugios = refugios[refugios["codigo"] != str(codigo)]
+        for servicio, tabla in [("agua", fuentes), ("refugio", otros_refugios), ("salud", salud)]:
+            resultados[servicio].append(servicio_mas_cercano(tabla, alcanzados))
 
-        cruces_agua = nodos_fuentes & alcanzados.keys()
-        dist_agua.append(min(alcanzados[n] for n in cruces_agua) if cruces_agua else np.nan)
-
-        cruces_salud = nodos_salud & alcanzados.keys()
-        dist_salud.append(min(alcanzados[n] for n in cruces_salud) if cruces_salud else np.nan)
-
-        otros_refugios = refugios[(refugios["codigo"] != str(codigo)) & (refugios["nodo"].isin(alcanzados.keys()))]
-        dist_refugio.append(min(alcanzados[n] for n in otros_refugios["nodo"]) if len(otros_refugios) > 0 else np.nan)
-
-    indice["dist_agua"] = dist_agua
-    indice["dist_refugio"] = dist_refugio
-    indice["dist_salud"] = dist_salud
+    for servicio in ["agua", "refugio", "salud"]:
+        indice[f"dist_{servicio}"] = [distancia for distancia, _, _ in resultados[servicio]]
+        indice[f"nombre_{servicio}"] = [nombre for _, nombre, _ in resultados[servicio]]
+        indice[f"direccion_{servicio}"] = [direccion for _, _, direccion in resultados[servicio]]
     return indice
 
 
