@@ -503,19 +503,50 @@ with tab_ciudad:
     components.html(mapa_doble.get_root().render(), height=650)
 
     st.subheader(f"Distribución de la temperatura de las zonas: {distrito_elegido}")
+    degradado = (f"linear-gradient(to right, {colores_calor(tramos[0])}, "
+                 f"{colores_calor((tramos[0] + tramos[-1]) / 2)}, {colores_calor(tramos[-1])})")
     st.markdown(f'<span style="color:{COLOR_SILUETA}; font-size:16px">□ Hoy (silueta)</span> &nbsp;&nbsp; '
-                f'<span style="color:{COLOR_FASE}; font-size:16px">■ {fase_elegida}</span> &nbsp;&nbsp; '
+                f'<span style="display:inline-block; width:28px; height:12px; background:{degradado}"></span> '
+                f'<span style="font-size:16px">{fase_elegida} (color según la temperatura, como en el mapa)</span> &nbsp;&nbsp; '
                 '<span style="font-size:16px">▲ Centros de mayores (temperatura media de su entorno)</span>',
                 unsafe_allow_html=True)
-    barras_fase = alt.Chart(pd.DataFrame({"temperatura": zona["lst_fase"]})).mark_bar(
-        color=COLOR_FASE, opacity=0.85).encode(
-        x=alt.X("temperatura:Q", bin=alt.Bin(step=0.5), title="Temperatura del suelo en verano (°C)"),
-        y=alt.Y("count()", title="Nº de zonas")
+
+    ANCHO_BARRA = 0.5
+
+    def contar_por_tramo(temperaturas):
+        tabla = pd.DataFrame({"inicio": (temperaturas // ANCHO_BARRA) * ANCHO_BARRA})
+        tabla = tabla.groupby("inicio").size().reset_index(name="zonas")
+        tabla["fin"] = tabla["inicio"] + ANCHO_BARRA
+        tabla["color"] = (tabla["inicio"] + ANCHO_BARRA / 2).apply(colores_calor)
+        tabla["texto"] = (tabla["inicio"].map("{:.1f}".format) + " a "
+                          + tabla["fin"].map("{:.1f}".format) + " °C")
+        return tabla
+
+    conteo_fase = contar_por_tramo(zona["lst_fase"])
+    conteo_hoy = contar_por_tramo(zona["lst"])
+    primer_borde = min(conteo_fase["inicio"].min(), conteo_hoy["inicio"].min())
+    ultimo_borde = max(conteo_fase["fin"].max(), conteo_hoy["fin"].max())
+    numero_bordes = int(round((ultimo_borde - primer_borde) / ANCHO_BARRA)) + 1
+    bordes = [primer_borde + paso * ANCHO_BARRA for paso in range(numero_bordes)]
+
+    barras_fase = alt.Chart(conteo_fase).mark_bar(opacity=0.9, stroke="white", strokeWidth=0.5).encode(
+        x=alt.X("inicio:Q", title="Temperatura del suelo en verano (°C)",
+                scale=alt.Scale(domain=[primer_borde, ultimo_borde]),
+                axis=alt.Axis(values=bordes, format=".1f")),
+        x2="fin:Q",
+        y=alt.Y("zonas:Q", title="Nº de zonas"),
+        y2=alt.datum(0),
+        color=alt.Color("color:N", scale=None),
+        tooltip=[alt.Tooltip("texto:N", title="Temperatura"),
+                 alt.Tooltip("zonas:Q", title=f"Zonas ({nombre_fase})")]
     )
-    barras_hoy = alt.Chart(pd.DataFrame({"temperatura": zona["lst"]})).mark_bar(
-        fillOpacity=0, stroke=COLOR_SILUETA, strokeWidth=1.5).encode(
-        x=alt.X("temperatura:Q", bin=alt.Bin(step=0.5)),
-        y=alt.Y("count()")
+    barras_hoy = alt.Chart(conteo_hoy).mark_bar(fillOpacity=0, stroke=COLOR_SILUETA, strokeWidth=1.5).encode(
+        x="inicio:Q",
+        x2="fin:Q",
+        y="zonas:Q",
+        y2=alt.datum(0),
+        tooltip=[alt.Tooltip("texto:N", title="Temperatura"),
+                 alt.Tooltip("zonas:Q", title="Zonas (hoy)")]
     )
     umbral = pd.DataFrame({"umbral": [47], "etiqueta": ["47 °C · zona muy caliente"]})
     linea_47 = alt.Chart(umbral).mark_rule(color=COLOR_UMBRAL, strokeWidth=2, strokeDash=[6, 4]).encode(x="umbral:Q")
