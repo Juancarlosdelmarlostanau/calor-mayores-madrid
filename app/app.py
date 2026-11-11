@@ -599,9 +599,9 @@ with tab_centro:
         "edificios": ("Edificios bajos o naves al sol", "Edificios que dan sombra", "Edificios"),
         "parques": ("Lejos de un parque grande", "Cerca de un parque grande", "Distancia a un parque grande")
     }
-    COLOR_FUENTE = "deepskyblue"
-    COLOR_REFUGIO = "teal"
-    COLOR_SALUD = "purple"
+    COLOR_FUENTE = "#1c83e1"
+    COLOR_REFUGIO = "#21c354"
+    COLOR_SALUD = "#803df5"
     COLOR_CENTRO = "#1f77b4"
     COLOR_COMODO = "#238b45"
     COLOR_LIMITE = "#00441b"
@@ -737,17 +737,18 @@ with tab_centro:
             f'<div style="flex:1; height:10px; border-radius:3px; opacity:{OPACIDAD_CALLES + 0.2}; '
             f'background:linear-gradient(to right, #ffffcc, #fed976, #fd8d3c, #e31a1c, #800026)"></div>'
             f'<span>{urbanos_lst.quantile(0.95):.0f} °C</span></div>'
-            f'<div style="font-size:15px; margin:4px 0 8px 0">'
+            f'<div style="font-size:15px; margin:4px 0 4px 0">'
             f'<span style="color:{COLOR_LIMITE}"><b>- - -</b></span> 15 minutos andando &nbsp; '
             f'<span style="color:{COLOR_COMODO}">■</span> recorrido cómodo &nbsp; '
             f'<span style="color:#b0b0b0">■</span> edificios &nbsp; '
-            f'<span style="color:{COLOR_CENTRO}">●</span> centro &nbsp; '
-            f'<span style="color:{COLOR_FUENTE}">●</span> fuente &nbsp; '
-            f'<span style="color:{COLOR_REFUGIO}">●</span> refugio &nbsp; '
-            f'<span style="color:{COLOR_SALUD}">●</span> salud &nbsp; '
-            f'<span style="color:white; -webkit-text-stroke:1px black">●</span> otros centros</div>',
+            f'<span style="color:{COLOR_CENTRO}">●</span> centro</div>',
             unsafe_allow_html=True
         )
+        casilla_fuentes, casilla_refugios, casilla_salud, casilla_otros = st.columns(4)
+        ver_fuentes = casilla_fuentes.checkbox(":blue[●] Fuentes")
+        ver_refugios = casilla_refugios.checkbox(":green[●] Refugios")
+        ver_salud = casilla_salud.checkbox(":violet[●] Centros de salud")
+        ver_otros = casilla_otros.checkbox("○ Otros centros")
 
         punto_wgs84 = gpd.GeoSeries([fila.geometry], crs=indice.crs).to_crs(epsg=4326).iloc[0]
         mapa_centro = folium.Map(
@@ -776,27 +777,31 @@ with tab_centro:
                                              "fillOpacity": 0}
         ).add_to(mapa_centro)
 
-        for _, fuente in fuentes_app.cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
-            folium.CircleMarker(location=[fuente.geometry.y, fuente.geometry.x], radius=5, color="black", weight=1,
-                                fill=True, fill_color=COLOR_FUENTE, fill_opacity=1,
-                                tooltip=f"Fuente: {fuente['UBICACION']}").add_to(mapa_centro)
-        for _, refugio in refugios_app.cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
-            if refugio["codigo"] != codigo_centro:
-                texto_refugio = f"Refugio ({refugio['tipo_refugio']}): {refugio['nombre']}"
-                if limpiar_direccion(refugio["direccion"]) != "":
-                    texto_refugio += " · " + limpiar_direccion(refugio["direccion"])
-                folium.CircleMarker(location=[refugio.geometry.y, refugio.geometry.x], radius=7, color="white",
-                                    weight=1, fill=True, fill_color=COLOR_REFUGIO, fill_opacity=1,
-                                    tooltip=texto_refugio).add_to(mapa_centro)
-        for _, sanitario in salud_app.cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
-            folium.CircleMarker(location=[sanitario.geometry.y, sanitario.geometry.x], radius=7, color="white",
-                                weight=1, fill=True, fill_color=COLOR_SALUD, fill_opacity=1,
-                                tooltip=f"{sanitario['tipo_salud'].capitalize()}: {sanitario['NOMBRE']} · "
-                                        f"{limpiar_direccion(sanitario['direccion'])}").add_to(mapa_centro)
-        for _, otro in indice[indice["codigo"] != codigo_centro].cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
-            folium.CircleMarker(location=[otro.geometry.y, otro.geometry.x], radius=5, color="black", weight=1.5,
-                                fill=True, fill_color="white", fill_opacity=1,
-                                tooltip=otro["nombre"]).add_to(mapa_centro)
+        if ver_fuentes:
+            for _, fuente in fuentes_app.cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
+                folium.CircleMarker(location=[fuente.geometry.y, fuente.geometry.x], radius=5, color="black",
+                                    weight=1, fill=True, fill_color=COLOR_FUENTE, fill_opacity=1,
+                                    tooltip="Fuente de agua").add_to(mapa_centro)
+        if ver_refugios:
+            for _, refugio in refugios_app.cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
+                if refugio["codigo"] != codigo_centro:
+                    texto_refugio = f"Refugio ({refugio['tipo_refugio']}): {refugio['nombre']}"
+                    if limpiar_direccion(refugio["direccion"]) != "":
+                        texto_refugio += " · " + limpiar_direccion(refugio["direccion"])
+                    folium.CircleMarker(location=[refugio.geometry.y, refugio.geometry.x], radius=7, color="white",
+                                        weight=1, fill=True, fill_color=COLOR_REFUGIO, fill_opacity=1,
+                                        tooltip=texto_refugio).add_to(mapa_centro)
+        if ver_salud:
+            for _, sanitario in salud_app.cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
+                folium.CircleMarker(location=[sanitario.geometry.y, sanitario.geometry.x], radius=7, color="white",
+                                    weight=1, fill=True, fill_color=COLOR_SALUD, fill_opacity=1,
+                                    tooltip=f"{sanitario['tipo_salud'].capitalize()}: {sanitario['NOMBRE']} · "
+                                            f"{limpiar_direccion(sanitario['direccion'])}").add_to(mapa_centro)
+        if ver_otros:
+            for _, otro in indice[indice["codigo"] != codigo_centro].cx[xmin:xmax, ymin:ymax].to_crs(epsg=4326).iterrows():
+                folium.CircleMarker(location=[otro.geometry.y, otro.geometry.x], radius=5, color="black", weight=1.5,
+                                    fill=True, fill_color="white", fill_opacity=1,
+                                    tooltip=otro["nombre"]).add_to(mapa_centro)
         folium.CircleMarker(location=[punto_wgs84.y, punto_wgs84.x], radius=11, color="white", weight=2,
                             fill=True, fill_color=COLOR_CENTRO, fill_opacity=1,
                             tooltip=fila["nombre"]).add_to(mapa_centro)
@@ -854,8 +859,12 @@ with tab_centro:
         for servicio, sufijo, color, mostrar_nombre in [("Fuente", "agua", COLOR_FUENTE, False),
                                                         ("Refugio", "refugio", COLOR_REFUGIO, True),
                                                         ("Centro de salud", "salud", COLOR_SALUD, True)]:
+            if sufijo == "agua":
+                direccion_servicio = ""
+            else:
+                direccion_servicio = fila[f"direccion_{sufijo}"]
             linea = texto_servicio(servicio, fila[f"dist_{sufijo}"], fila[f"nombre_{sufijo}"],
-                                   fila[f"direccion_{sufijo}"], mostrar_nombre)
+                                   direccion_servicio, mostrar_nombre)
             st.markdown(f'<p style="font-size:16px; margin:3px 0"><span style="color:{color}; font-size:20px">●</span> '
                         f'{linea}</p>', unsafe_allow_html=True)
 
