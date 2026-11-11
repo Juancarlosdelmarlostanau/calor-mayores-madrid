@@ -3,7 +3,6 @@
 import os
 
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 import folium
