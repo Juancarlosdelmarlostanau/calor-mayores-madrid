@@ -15,6 +15,22 @@ from folium.plugins import DualMap
 CARPETA_APP = os.path.dirname(os.path.abspath(__file__))
 RUTA_CLEAN = os.path.join(CARPETA_APP, "..", "clean", "")
 COLORES_PRIORIDAD = {"alta": "red", "media": "orange", "baja": "#ffe680"}
+
+# Colores de la app: cálidos solo para el calor, verdes para los árboles y el plan, azul solo para el agua.
+COLOR_PLAN = "#2e7d32"
+COLOR_FUERA_PLAN = "#a5d6a7"
+COLOR_RESALTE = "#1b5e20"
+COLOR_CALIENTA = "#e31a1c"
+COLOR_ENFRIA = "#26a69a"
+COLOR_NEUTRO = "#9e9e9e"
+COLOR_FASE = "#fd8d3c"
+COLOR_HOY = "#7a7a7a"
+COLOR_SILUETA = "#555555"
+COLOR_LINEA_SUAVE = "#9e9e9e"
+COLOR_TEXTO_SUAVE = "#5f6b63"
+COLOR_UMBRAL = "#d32f2f"
+COLOR_CENTRO = "#ffffff"
+COLOR_CENTRO_BORDE = "#111111"
 TEXTO_MEDIDA = {
     "vegetacion": "Plantar árboles",
     "suelo_desnudo": "Ajardinar solares y descampados",
@@ -236,10 +252,10 @@ with tab_resumen:
             folium.CircleMarker(
                 location=[primero.geometry.y, primero.geometry.x],
                 radius=10 if elegido else 4.5,
-                color="#0b3d91" if elegido else "dimgrey",
+                color=COLOR_CENTRO_BORDE if elegido else "dimgrey",
                 weight=3 if elegido else 1,
                 fill=True,
-                fill_color="#1f77b4" if elegido else COLORES_PRIORIDAD[primero["prioridad"]],
+                fill_color=COLOR_CENTRO if elegido else COLORES_PRIORIDAD[primero["prioridad"]],
                 fill_opacity=0.9,
                 tooltip=texto_raton,
                 popup=folium.Popup(crear_ficha(grupo), max_width=320, show=elegido)
@@ -259,7 +275,7 @@ with tab_resumen:
             y=alt.Y("medida_texto:N", sort="-x", title=None, axis=alt.Axis(labelLimit=250)),
             color=alt.Color("estado:N",
                             scale=alt.Scale(domain=["En el plan de arbolado", "Fuera del plan"],
-                                            range=["#1f77b4", "#aec7e8"]),
+                                            range=[COLOR_PLAN, COLOR_FUERA_PLAN]),
                             legend=alt.Legend(title=None, orient="top")),
             order=alt.Order("estado:N"),
             tooltip=["medida_texto", "estado", "centros"]
@@ -297,12 +313,12 @@ with tab_ciudad:
     OPACIDAD_FUERA = 1
 
     st.subheader("¿Cuánto se puede enfriar la ciudad plantando árboles?")
+    texto_tramo = f"{TAMANO_TRAMO:.2f}".replace(".", ",")
     st.markdown(
         '<p style="font-size:18px">El mapa de la izquierda muestra la temperatura del suelo en verano, hoy. '
         'El de la derecha, cuánto bajaría si se plantaran árboles en el entorno de 15 minutos andando de todos los '
         'centros de mayores (potencial máximo), según la fase elegida. Los dos usan los mismos colores, por tramos de '
-        f'{TAMANO_TRAMO:.2f} °C'.replace(".", ",") + ': una zona que cambia de color ha bajado al menos de tramo. '
-        '</p>',
+        f'{texto_tramo} °C: una zona que cambia de color ha bajado al menos de tramo.</p>',
         unsafe_allow_html=True
     )
 
@@ -356,13 +372,13 @@ with tab_ciudad:
     tarjeta1.metric("Centros de mayores", f"{len(centros_zona)}",
                     help="Residencias, centros de día, centros de mayores y viviendas tuteladas en esta zona.")
     tarjeta1.caption(f"{(centros_zona['prioridad'] == 'alta').sum()} de prioridad alta")
-    tarjeta2.metric("Temperatura media del entorno de los centros",
+    tarjeta2.metric("Temperatura del entorno de los centros",
                     f"{zona.loc[entorno, 'lst_fase'].mean():.1f} °C",
                     delta=f"{-zona.loc[entorno, 'bajada'].mean():.2f} °C", delta_color="inverse",
                     help="Media de las zonas a menos de 15 minutos andando de algún centro de mayores, con la fase elegida.")
     centros_calientes_hoy = (centros_zona["lst_isocrona"] > UMBRAL_ENTORNO).sum()
     centros_calientes_fase = (centros_zona["temperatura"] > UMBRAL_ENTORNO).sum()
-    tarjeta3.metric(f"Centros con el entorno por encima de {UMBRAL_ENTORNO} °C",
+    tarjeta3.metric(f"Centros con entorno de más de {UMBRAL_ENTORNO} °C",
                     f"{centros_calientes_fase} de {len(centros_zona)}",
                     delta=f"{centros_calientes_fase - centros_calientes_hoy}", delta_color="inverse",
                     help=f"Centros cuyo entorno de 15 minutos supera de media los {UMBRAL_ENTORNO} °C, que hoy son "
@@ -376,7 +392,7 @@ with tab_ciudad:
     if centro_elegido != "Ninguno":
         fila_elegido = centros_zona[centros_zona["nombre"] == centro_elegido].iloc[0]
         with st.container(border=True):
-            st.markdown(f'<p style="font-size:18px; color:#1f77b4"><b>▲ {centro_elegido}</b></p>',
+            st.markdown(f'<p style="font-size:18px; color:{COLOR_RESALTE}"><b>▲ {centro_elegido}</b></p>',
                         unsafe_allow_html=True)
             ficha1, ficha2, ficha3, ficha4 = st.columns(4)
             ficha1.metric("Prioridad", f"{fila_elegido['prioridad']}",
@@ -468,7 +484,7 @@ with tab_ciudad:
     if distrito_elegido != "Toda la ciudad":
         folium.GeoJson(
             distritos_wgs84[distritos_wgs84["NOMBRE"] == distrito_elegido][["geometry"]],
-            style_function=lambda elemento: {"color": "#1f77b4", "weight": 5, "fillOpacity": 0}
+            style_function=lambda elemento: {"color": COLOR_RESALTE, "weight": 5, "fillOpacity": 0}
         ).add_to(mapa_doble)
     if ver_centros:
         for _, centro in centros_zona.to_crs(epsg=4326).iterrows():
@@ -481,29 +497,29 @@ with tab_ciudad:
         punto_elegido = centros_zona[centros_zona["nombre"] == centro_elegido].to_crs(epsg=4326).geometry.iloc[0]
         folium.CircleMarker(
             location=[punto_elegido.y, punto_elegido.x],
-            radius=8, color="white", weight=2, fill=True, fill_color="#1f77b4", fill_opacity=1,
+            radius=8, color=COLOR_CENTRO_BORDE, weight=3, fill=True, fill_color=COLOR_CENTRO, fill_opacity=1,
             tooltip=centro_elegido
         ).add_to(mapa_doble)
     components.html(mapa_doble.get_root().render(), height=650)
 
     st.subheader(f"Distribución de la temperatura de las zonas: {distrito_elegido}")
-    st.markdown('<span style="color:#bdbdbd; font-size:16px">□ Hoy (silueta)</span> &nbsp;&nbsp; '
-                f'<span style="color:#fd8d3c; font-size:16px">■ {fase_elegida}</span> &nbsp;&nbsp; '
+    st.markdown(f'<span style="color:{COLOR_SILUETA}; font-size:16px">□ Hoy (silueta)</span> &nbsp;&nbsp; '
+                f'<span style="color:{COLOR_FASE}; font-size:16px">■ {fase_elegida}</span> &nbsp;&nbsp; '
                 '<span style="font-size:16px">▲ Centros de mayores (temperatura media de su entorno)</span>',
                 unsafe_allow_html=True)
     barras_fase = alt.Chart(pd.DataFrame({"temperatura": zona["lst_fase"]})).mark_bar(
-        color="#fd8d3c", opacity=0.85).encode(
+        color=COLOR_FASE, opacity=0.85).encode(
         x=alt.X("temperatura:Q", bin=alt.Bin(step=0.5), title="Temperatura del suelo en verano (°C)"),
         y=alt.Y("count()", title="Nº de zonas")
     )
     barras_hoy = alt.Chart(pd.DataFrame({"temperatura": zona["lst"]})).mark_bar(
-        fillOpacity=0, stroke="#bdbdbd", strokeWidth=1.5).encode(
+        fillOpacity=0, stroke=COLOR_SILUETA, strokeWidth=1.5).encode(
         x=alt.X("temperatura:Q", bin=alt.Bin(step=0.5)),
         y=alt.Y("count()")
     )
     umbral = pd.DataFrame({"umbral": [47], "etiqueta": ["47 °C · zona muy caliente"]})
-    linea_47 = alt.Chart(umbral).mark_rule(color="#ff4b4b", strokeWidth=2, strokeDash=[6, 4]).encode(x="umbral:Q")
-    texto_47 = alt.Chart(umbral).mark_text(color="#ff4b4b", align="left", dx=6, fontSize=13).encode(
+    linea_47 = alt.Chart(umbral).mark_rule(color=COLOR_UMBRAL, strokeWidth=2, strokeDash=[6, 4]).encode(x="umbral:Q")
+    texto_47 = alt.Chart(umbral).mark_text(color=COLOR_UMBRAL, align="left", dx=6, fontSize=13).encode(
         x="umbral:Q", y=alt.value(12), text="etiqueta:N"
     )
     grafico_histograma = barras_fase + barras_hoy + linea_47 + texto_47
@@ -517,7 +533,7 @@ with tab_ciudad:
     if centro_elegido != "Ninguno":
         triangulo_elegido = alt.Chart(centros_zona[centros_zona["nombre"] == centro_elegido][
             ["nombre", "temperatura", "texto"]]).mark_point(
-            shape="triangle-up", filled=True, color="#1f77b4", stroke="white", size=300, opacity=1, yOffset=-12).encode(
+            shape="triangle-up", filled=True, color=COLOR_RESALTE, stroke="white", size=300, opacity=1, yOffset=-12).encode(
             x="temperatura:Q", y=alt.datum(0),
             tooltip=[alt.Tooltip("nombre:N", title="Centro"), alt.Tooltip("texto:N", title="Temperatura")]
         )
@@ -540,8 +556,8 @@ with tab_ciudad:
     orden_distritos = resumen_distritos.sort_values("hoy", ascending=False)["distrito"].tolist()
 
     st.markdown('<p style="font-size:17px">Temperatura media del entorno de los centros de cada distrito: '
-                '<span style="color:#9e9e9e"><b>● hoy</b></span> y '
-                f'<span style="color:#fd8d3c"><b>● {fase_elegida.lower()}</b></span>. '
+                f'<span style="color:{COLOR_HOY}"><b>● hoy</b></span> y '
+                f'<span style="color:{COLOR_FASE}"><b>● {fase_elegida.lower()}</b></span>. '
                 'Ordenados del entorno más caliente hoy al menos caliente.</p>', unsafe_allow_html=True)
     eje_distrito = alt.Y("distrito:N", sort=orden_distritos, title=None, axis=alt.Axis(labelLimit=200))
     ayuda_distrito = [alt.Tooltip("distrito:N", title="Distrito"), alt.Tooltip("centros:Q", title="Centros"),
@@ -549,22 +565,22 @@ with tab_ciudad:
                       alt.Tooltip("bajada:Q", title="Bajada (°C)")]
     lineas = alt.Chart(resumen_distritos).mark_rule().encode(
         x="fase:Q", x2="hoy:Q", y=eje_distrito,
-        color=alt.condition(alt.datum.elegido, alt.value("#1f77b4"), alt.value("#bdbdbd")),
+        color=alt.condition(alt.datum.elegido, alt.value(COLOR_RESALTE), alt.value(COLOR_LINEA_SUAVE)),
         strokeWidth=alt.condition(alt.datum.elegido, alt.value(4), alt.value(2))
     )
-    puntos_hoy = alt.Chart(resumen_distritos).mark_circle(size=110, color="#9e9e9e", opacity=1).encode(
+    puntos_hoy = alt.Chart(resumen_distritos).mark_circle(size=110, color=COLOR_HOY, opacity=1).encode(
         x=alt.X("hoy:Q", scale=alt.Scale(zero=False), title="Temperatura media del entorno de los centros (°C)"),
         y=eje_distrito, tooltip=ayuda_distrito
     )
-    puntos_fase = alt.Chart(resumen_distritos).mark_circle(size=110, color="#fd8d3c", opacity=1).encode(
+    puntos_fase = alt.Chart(resumen_distritos).mark_circle(size=110, color=COLOR_FASE, opacity=1).encode(
         x="fase:Q", y=eje_distrito, tooltip=ayuda_distrito
     )
     umbral_entorno = pd.DataFrame({"umbral": [UMBRAL_ENTORNO],
                                    "etiqueta": [f"{UMBRAL_ENTORNO} °C · entorno muy caluroso"]})
-    linea_45 = alt.Chart(umbral_entorno).mark_rule(color="#ff4b4b", strokeWidth=2, strokeDash=[6, 4]).encode(
+    linea_45 = alt.Chart(umbral_entorno).mark_rule(color=COLOR_UMBRAL, strokeWidth=2, strokeDash=[6, 4]).encode(
         x="umbral:Q"
     )
-    texto_45 = alt.Chart(umbral_entorno).mark_text(color="#ff4b4b", align="left", dx=6, fontSize=13).encode(
+    texto_45 = alt.Chart(umbral_entorno).mark_text(color=COLOR_UMBRAL, align="left", dx=6, fontSize=13).encode(
         x="umbral:Q", y=alt.value(-8), text="etiqueta:N"
     )
     st.altair_chart((lineas + puntos_hoy + puntos_fase + linea_45 + texto_45).properties(height=520),
@@ -575,7 +591,7 @@ with tab_ciudad:
     zonas_menos = (urbanos["lst"] > 47).sum() - (urbanos["lst_fase"] > 47).sum()
     mas_ganan = ", ".join(resumen_distritos.nlargest(3, "bajada")["distrito"])
     mas_calientes = ", ".join(resumen_distritos.nlargest(3, "fase")["distrito"])
-    st.info(f"**Conclusión:** con la {nombre_fase} en el entorno de todos los centros, la temperatura media del suelo "
+    st.success(f"**Conclusión:** con la {nombre_fase} en el entorno de todos los centros, la temperatura media del suelo "
             f"de ese entorno bajaría {bajada_ciudad:.2f} °C y {zonas_menos} zonas dejarían de superar los 47 °C. "
             f"Los distritos que más ganan son {mas_ganan}. Aun así, los entornos más calientes seguirían siendo los "
             f"de {mas_calientes}: ahí harán falta además otras medidas, como refugios y fuentes.")
@@ -601,7 +617,6 @@ with tab_centro:
     COLOR_FUENTE = "#1c83e1"
     COLOR_REFUGIO = "#21c354"
     COLOR_SALUD = "#803df5"
-    COLOR_CENTRO = "#1f77b4"
     COLOR_COMODO = "#238b45"
     COLOR_LIMITE = "#00441b"
 
@@ -646,7 +661,7 @@ with tab_centro:
         paso_elegido = st.select_slider("Evolución con el plan de arbolado: desliza para ver cada fase",
                                         options=list(PASOS_CENTRO.keys()), value="Hoy")
         st.markdown(
-            '<div style="display:flex; justify-content:space-between; font-size:14px; color:#9e9e9e; '
+            f'<div style="display:flex; justify-content:space-between; font-size:14px; color:{COLOR_TEXTO_SUAVE}; '
             'margin-top:-12px; margin-bottom:8px"><span>Hoy</span><span>Fase 1 (+5 %)</span>'
             '<span>Fase 2 (+10 %)</span><span>Fase 3 (+20 %)</span></div>',
             unsafe_allow_html=True
@@ -740,7 +755,7 @@ with tab_centro:
             f'<span style="color:{COLOR_LIMITE}"><b>- - -</b></span> 15 minutos andando &nbsp; '
             f'<span style="color:{COLOR_COMODO}">■</span> recorrido cómodo &nbsp; '
             f'<span style="color:#b0b0b0">■</span> edificios &nbsp; '
-            f'<span style="color:{COLOR_CENTRO}">●</span> centro</div>',
+            f'<span style="color:{COLOR_CENTRO}; -webkit-text-stroke:1.5px {COLOR_CENTRO_BORDE}">●</span> centro</div>',
             unsafe_allow_html=True
         )
         casilla_fuentes, casilla_refugios, casilla_salud, casilla_otros = st.columns(4)
@@ -801,7 +816,7 @@ with tab_centro:
                 folium.CircleMarker(location=[otro.geometry.y, otro.geometry.x], radius=5, color="black", weight=1.5,
                                     fill=True, fill_color="white", fill_opacity=1,
                                     tooltip=otro["nombre"]).add_to(mapa_centro)
-        folium.CircleMarker(location=[punto_wgs84.y, punto_wgs84.x], radius=11, color="white", weight=2,
+        folium.CircleMarker(location=[punto_wgs84.y, punto_wgs84.x], radius=11, color=COLOR_CENTRO_BORDE, weight=3,
                             fill=True, fill_color=COLOR_CENTRO, fill_opacity=1,
                             tooltip=fila["nombre"]).add_to(mapa_centro)
         components.html(mapa_centro.get_root().render(), height=ALTURA_MAPA)
@@ -821,14 +836,14 @@ with tab_centro:
                         f'{temperatura_hoy:.1f} → {temperatura_final:.1f} °C '
                         f'({temperatura_final - temperatura_hoy:+.1f} °C de hoy a la fase 3)</p>',
                         unsafe_allow_html=True)
-            linea_temperatura = alt.Chart(evolucion).mark_line(point=True, color="#fd8d3c", strokeWidth=3).encode(
+            linea_temperatura = alt.Chart(evolucion).mark_line(point=True, color=COLOR_FASE, strokeWidth=3).encode(
                 x=eje_pasos,
                 y=alt.Y("temperatura:Q", scale=alt.Scale(zero=False, padding=30), title="°C"),
                 tooltip=[alt.Tooltip("paso:O", title="Fase"), alt.Tooltip("temperatura:Q", title="°C")]
             )
-            valores_temperatura = alt.Chart(evolucion).mark_text(dy=-14, fontSize=13, color="#fd8d3c").encode(
+            valores_temperatura = alt.Chart(evolucion).mark_text(dy=-14, fontSize=13, color=COLOR_FASE).encode(
                 x=eje_pasos, y="temperatura:Q", text="texto_temperatura:N")
-            marca_temperatura = alt.Chart(marca_paso).mark_rule(color=COLOR_CENTRO, strokeWidth=3,
+            marca_temperatura = alt.Chart(marca_paso).mark_rule(color=COLOR_RESALTE, strokeWidth=3,
                                                                 opacity=0.6).encode(x=alt.X("paso:O", sort=orden_pasos))
             st.altair_chart((marca_temperatura + linea_temperatura + valores_temperatura).properties(height=200),
                             use_container_width=True)
@@ -844,7 +859,7 @@ with tab_centro:
             )
             valores_confort = alt.Chart(evolucion).mark_text(dy=-14, fontSize=13, color=COLOR_COMODO).encode(
                 x=eje_pasos, y="confort:Q", text="texto_confort:N")
-            marca_confort = alt.Chart(marca_paso).mark_rule(color=COLOR_CENTRO, strokeWidth=3,
+            marca_confort = alt.Chart(marca_paso).mark_rule(color=COLOR_RESALTE, strokeWidth=3,
                                                             opacity=0.6).encode(x=alt.X("paso:O", sort=orden_pasos))
             st.altair_chart((marca_confort + linea_confort + valores_confort).properties(height=200),
                             use_container_width=True)
@@ -888,7 +903,7 @@ with tab_centro:
 
     with columna_palancas:
         st.markdown("#### ¿Qué calienta su entorno? (hoy)")
-        st.caption("Según el modelo (SHAP): grados que suma (rojo) o resta (azul) cada factor a su entorno, "
+        st.caption("Según el modelo (SHAP): grados que suma (rojo) o resta (verde azulado) cada factor a su entorno, "
                    "comparado con la media de Madrid.")
         palancas = []
         for clave, (texto_calienta, texto_enfria, texto_neutro) in TEXTO_PALANCA.items():
@@ -905,11 +920,11 @@ with tab_centro:
             y=alt.Y("factor:N", sort=None, title=None, axis=alt.Axis(labelLimit=300, labelFontSize=13)),
             color=alt.Color("efecto:N",
                             scale=alt.Scale(domain=["Calienta", "Enfría", "Sin efecto"],
-                                            range=["#e31a1c", "#1f77b4", "#9e9e9e"]),
+                                            range=[COLOR_CALIENTA, COLOR_ENFRIA, COLOR_NEUTRO]),
                             legend=alt.Legend(title=None, orient="top")),
             tooltip=[alt.Tooltip("factor:N", title="Factor"), alt.Tooltip("grados:Q", title="°C")]
         )
-        linea_cero = alt.Chart(pd.DataFrame({"cero": [0]})).mark_rule(color="#bdbdbd").encode(x="cero:Q")
+        linea_cero = alt.Chart(pd.DataFrame({"cero": [0]})).mark_rule(color=COLOR_LINEA_SUAVE).encode(x="cero:Q")
         st.altair_chart((barras_palancas + linea_cero).properties(height=210), use_container_width=True)
 
 st.divider()
