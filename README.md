@@ -79,7 +79,7 @@ La carpeta `raw/` no se incluye en el repositorio por su tamaño. Para reproduci
 ### 8. Isócronas: el entorno de 15 minutos andando
 - **Isócrona normal:** zona a la que se llega andando por la red de calles en 15 minutos a 0,8 m/s, la velocidad de una persona mayor (720 m de recorrido). Respeta las barreras reales, como autovías, vías de tren o parques cerrados.
 - **Nodo puerta:** cada centro sale a la red por un nodo virtual unido a todos los cruces a menos de 100 m, para no quedar atrapado en un camino mal conectado.
-- **Isócrona confortable:** la parte del recorrido que se puede hacer sin exceso de calor. Cada tramo de calle se penaliza según su temperatura (coste = tiempo × (1 + α × calor del tramo), con α = 1,5), siguiendo el enfoque de Sánchez-González y Osorio-Arjona (2025).
+- **Isócrona confortable:** la parte del recorrido que se puede hacer sin exceso de calor. Cada tramo de calle tiene una "longitud vivida" que penaliza el calor: coste = longitud × (1 + (α − 1) × calor del tramo), donde el calor del tramo va de 0 (calle menos caliente) a 1 (calle muy caliente), escalado entre los percentiles 5 y 95 de la temperatura urbana. Con α = 1,5, un metro con el máximo calor se vive como 1,5 metros. Sigue la formulación de CoolWalks (Wolf, Vierø y Szell, 2025) y la idea de una isócrona que evita la exposición al calor (Huber y colaboradores, 2025).
 
 ### 9. Índice de riesgo
 - Marco del IPCC: **Riesgo = Peligro × Exposición × Vulnerabilidad × (1 − Capacidad)**, con cada componente entre 0 y 1.
@@ -225,7 +225,7 @@ Cada script reproduce exactamente el resultado de su notebook: al final de cada 
 - **Centros excluidos:** 11 centros sin coordenadas (unas 1.900 plazas) quedan fuera del estudio.
 - **Plazas no comparables:** las plazas de los centros de mayores son socios o aforo, no plazas de atención. Por eso la exposición se compara dentro de cada tipo de centro.
 - **Refugios:** Madrid no tiene una lista oficial unificada de refugios climáticos, y su definición sigue siendo objeto de debate público en el Ayuntamiento. En este proyecto se usan como refugios los mercados municipales y los centros de mayores, en línea con el plan municipal contra el calor de 2026.
-- **Supuestos del índice:** el orden de vulnerabilidad por tipo de centro se basa en el metaanálisis de Bouchama et al. (2007), que identifica la dependencia (estar encamado o no poder valerse por uno mismo) como el principal factor de riesgo de muerte en olas de calor; los valores concretos de la escala son un supuesto. El valor α = 1,5 de la isócrona confortable sigue el modelo CoolWalks (Wolf, Vierø y Szell, 2025), en el que un tramo al sol se percibe 1,5 veces más largo que uno a la sombra; sus autores señalan que α es difícil de medir en la práctica. Las pruebas de sensibilidad muestran que el orden de los centros apenas cambia con otra escala de vulnerabilidad (Spearman de 0,995) ni con otros valores de α (de 0,90 a 0,95).
+- **Supuestos del índice:** el orden de vulnerabilidad por tipo de centro se basa en el metaanálisis de Bouchama et al. (2007), que identifica la dependencia (estar encamado o no poder valerse por uno mismo) como el principal factor de riesgo de muerte en olas de calor; los valores concretos de la escala son un supuesto. El valor α = 1,5 de la isócrona confortable sigue el modelo CoolWalks (Wolf, Vierø y Szell, 2025), en el que un metro con el máximo calor se vive como 1,5 metros; sus autores señalan que α es difícil de medir en la práctica. Las pruebas de sensibilidad muestran que el orden de los centros apenas cambia con otra escala de vulnerabilidad (Spearman de 0,995) ni con otros valores de α (de 0,90 a 0,95).
 - **Viario:** el Urban Atlas solo separa como vía las calles de más de 10 m de ancho, por lo que el % de viario refleja sobre todo avenidas.
 
 ## Próximos pasos
@@ -238,9 +238,10 @@ Cada script reproduce exactamente el resultado de su notebook: al final de cada 
 
 ## Referencias
 
+- Annerstedt van den Bosch, M. et al. (2016). Development of an urban green space indicator and the public health rationale. *Scandinavian Journal of Public Health*, 44(2), 159-167. https://doi.org/10.1177/1403494815615444
 - Bouchama, A. et al. (2007). Prognostic factors in heat wave related deaths: a meta-analysis. *Archives of Internal Medicine*, 167(20), 2170-2176. https://doi.org/10.1001/archinte.167.20.ira70009
+- Huber, J., Ludwig, C., Foshag, K., Kolaxidis, N., Zipf, A. y Lautenbach, S. (2025). Accessibility for pedestrians under heat stress – the example of Heidelberg, Germany. *AGILE: GIScience Series*, 6, 4. https://doi.org/10.5194/agile-giss-6-4-2025
 - Pozo Menéndez, E., Cambra-Rufino, L., Jiménez Martín, D. y Zarco Colón, J. (2024). El papel de la arquitectura en los centros de atención a la dependencia. *Revista Española de Discapacidad*, 12(1), 99-118. https://doi.org/10.5569/2340-5104.12.01.05
-- Sánchez-González, D. y Osorio-Arjona, J. (2025). Pedestrian Mobility Behaviors of Older People in the Face of Heat Waves in Madrid City. *Urban Science*, 9(7), 236. https://doi.org/10.3390/urbansci9070236
 - Wolf, H., Vierø, A. R. y Szell, M. (2025). CoolWalks for active mobility in urban street networks. *Scientific Reports*, 15, 14911. https://doi.org/10.1038/s41598-025-97200-2
 
 ## Autor
