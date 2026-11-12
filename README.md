@@ -77,7 +77,7 @@ La carpeta `raw/` no se incluye en el repositorio por su tamaño. Para reproduci
 - Solo cambian la copa y el NDVI, así que los resultados son conservadores.
 
 ### 8. Isócronas: el entorno de 15 minutos andando
-- **Isócrona normal:** zona a la que se llega andando por la red de calles en 15 minutos a 0,8 m/s, la velocidad de una persona mayor (720 m de recorrido). Respeta las barreras reales, como autovías, vías de tren o parques cerrados.
+- **Isócrona normal:** zona a la que se llega andando por la red de calles en 15 minutos a 0,8 m/s, la velocidad media al caminar de las mujeres de 65 años o más según Asher y colaboradores (2012) (720 m de recorrido). Respeta las barreras reales, como autovías, vías de tren o parques cerrados.
 - **Nodo puerta:** cada centro sale a la red por un nodo virtual unido a todos los cruces a menos de 100 m, para no quedar atrapado en un camino mal conectado.
 - **Isócrona confortable:** la parte del recorrido que se puede hacer sin exceso de calor. Cada tramo de calle tiene una "longitud vivida" que penaliza el calor: coste = longitud × (1 + (α − 1) × calor del tramo), donde el calor del tramo va de 0 (calle menos caliente) a 1 (calle muy caliente), escalado entre los percentiles 5 y 95 de la temperatura urbana. Con α = 1,5, un metro con el máximo calor se vive como 1,5 metros. Sigue la formulación de CoolWalks (Wolf, Vierø y Szell, 2025) y la idea de una isócrona que evita la exposición al calor (Huber y colaboradores, 2025).
 
@@ -238,6 +238,7 @@ Cada script reproduce exactamente el resultado de su notebook: al final de cada 
 
 ## Referencias
 
+- Asher, L., Aresu, M., Falaschetti, E. y Mindell, J. (2012). Most older pedestrians are unable to cross the road in time: a cross-sectional study. *Age and Ageing*, 41(5), 690-694. https://doi.org/10.1093/ageing/afs076
 - Annerstedt van den Bosch, M. et al. (2016). Development of an urban green space indicator and the public health rationale. *Scandinavian Journal of Public Health*, 44(2), 159-167. https://doi.org/10.1177/1403494815615444
 - Bouchama, A. et al. (2007). Prognostic factors in heat wave related deaths: a meta-analysis. *Archives of Internal Medicine*, 167(20), 2170-2176. https://doi.org/10.1001/archinte.167.20.ira70009
 - Huber, J., Ludwig, C., Foshag, K., Kolaxidis, N., Zipf, A. y Lautenbach, S. (2025). Accessibility for pedestrians under heat stress – the example of Heidelberg, Germany. *AGILE: GIScience Series*, 6, 4. https://doi.org/10.5194/agile-giss-6-4-2025
