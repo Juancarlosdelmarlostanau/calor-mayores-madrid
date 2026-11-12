@@ -135,12 +135,14 @@ La carpeta `raw/` no se incluye en el repositorio por su tamaño. Para reproduci
 Aplicación interactiva desarrollada con **Streamlit**, con tres pestañas:
 
 - **Resumen:** mapa de los 439 centros por prioridad, con filtros por tipo de centro y prioridad. Muestra qué necesita el entorno de cada centro y la lista de centros ordenada por riesgo, con su confort y su refugio más cercano.
-- **La ciudad:** dos mapas de la temperatura de superficie de Madrid, hoy y tras cada fase del plan aplicada al entorno de todos los centros, con el mismo código de colores. Incluye la distribución de la temperatura de las zonas y la bajada por distrito.
-- **Un centro:** el entorno de 15 minutos andando de un centro, con sus calles coloreadas por temperatura, la zona confortable, las fuentes, los refugios y los centros de salud más cercanos andando. Un deslizador muestra la evolución con el plan de arbolado, y dos gráficos explican por qué está en riesgo hoy: los componentes del índice y los factores que calientan su entorno según el modelo.
+- **La ciudad:** dos mapas de la temperatura de superficie de Madrid con el mismo código de colores: hoy y con el potencial máximo de cada fase, es decir, plantando en todos los hexágonos que forman el entorno de 15 minutos de algún centro (fuera de esos entornos no se planta). Incluye la distribución de la temperatura de las zonas y la bajada por distrito.
+- **Un centro:** el entorno de 15 minutos andando de un centro, con sus calles coloreadas por temperatura, la zona confortable, las fuentes, los refugios y los centros de salud más cercanos andando. Un deslizador muestra la evolución con el plan de arbolado realista (las 50 zonas elegidas por el optimizador), y dos gráficos explican por qué está en riesgo hoy: los componentes del índice y los factores que calientan su entorno según el modelo.
 
 ### Cómo ejecutarla
 
 La aplicación está publicada en **Streamlit Community Cloud** y puede usarse directamente desde el navegador: [calor-mayores-madrid.streamlit.app](https://calor-mayores-madrid.streamlit.app/)
+
+Para ejecutarla en local (opcional):
 
 1. Instalar las dependencias:
 
@@ -222,8 +224,8 @@ Cada script reproduce exactamente el resultado de su notebook: al final de cada 
 - **Desfase entre fuentes:** el Urban Atlas es de 2021 y la temperatura de 2023 a 2026. Por ejemplo, el lago de la Casa de Campo aparece como suelo sin uso.
 - **Centros excluidos:** 11 centros sin coordenadas (unas 1.900 plazas) quedan fuera del estudio.
 - **Plazas no comparables:** las plazas de los centros de mayores son socios o aforo, no plazas de atención. Por eso la exposición se compara dentro de cada tipo de centro.
-- **Refugios:** Madrid no tiene una lista oficial unificada de refugios climáticos; se usan los mercados municipales y los centros de mayores.
-- **Supuestos del índice:** la escala de vulnerabilidad por tipo de centro y el valor de α de la isócrona confortable son supuestos. Las pruebas de sensibilidad muestran que no cambian el orden de los centros.
+- **Refugios:** Madrid no tiene una lista oficial unificada de refugios climáticos, y su definición sigue siendo objeto de debate público en el Ayuntamiento. En este proyecto se usan como refugios los mercados municipales y los centros de mayores, en línea con el plan municipal contra el calor de 2026.
+- **Supuestos del índice:** el orden de vulnerabilidad por tipo de centro se basa en el metaanálisis de Bouchama et al. (2007), que identifica la dependencia (estar encamado o no poder valerse por uno mismo) como el principal factor de riesgo de muerte en olas de calor; los valores concretos de la escala son un supuesto. El valor α = 1,5 de la isócrona confortable sigue el modelo CoolWalks (Wolf, Vierø y Szell, 2025), en el que un tramo al sol se percibe 1,5 veces más largo que uno a la sombra; sus autores señalan que α es difícil de medir en la práctica. Las pruebas de sensibilidad muestran que el orden de los centros apenas cambia con otra escala de vulnerabilidad (Spearman de 0,995) ni con otros valores de α (de 0,90 a 0,95).
 - **Viario:** el Urban Atlas solo separa como vía las calles de más de 10 m de ancho, por lo que el % de viario refleja sobre todo avenidas.
 
 ## Próximos pasos
@@ -236,11 +238,10 @@ Cada script reproduce exactamente el resultado de su notebook: al final de cada 
 
 ## Referencias
 
-- Sánchez-González, D. y Osorio-Arjona, J. (2025). Movilidad a pie de las personas mayores en olas de calor en Madrid. *Urban Science*, 9(7), 236. https://www.mdpi.com/2413-8851/9/7/236
-- Bouchama, A. et al. (2007). Prognostic factors in heat wave related deaths: a meta-analysis. *Archives of Internal Medicine*, 167(20), 2170-2176.
-- Pozo Menéndez, E. et al. (2024). Arquitectura en centros de dependencia. https://dialnet.unirioja.es/descarga/articulo/9691495.pdf
-- Bergstra, J. y Bengio, Y. (2012). Random search for hyper-parameter optimization. *Journal of Machine Learning Research*, 13, 281-305.
-- Lundberg, S. M. y Lee, S.-I. (2017). A unified approach to interpreting model predictions. *Advances in Neural Information Processing Systems*, 30.
+- Bouchama, A. et al. (2007). Prognostic factors in heat wave related deaths: a meta-analysis. *Archives of Internal Medicine*, 167(20), 2170-2176. https://doi.org/10.1001/archinte.167.20.ira70009
+- Pozo Menéndez, E., Cambra-Rufino, L., Jiménez Martín, D. y Zarco Colón, J. (2024). El papel de la arquitectura en los centros de atención a la dependencia. *Revista Española de Discapacidad*, 12(1), 99-118. https://doi.org/10.5569/2340-5104.12.01.05
+- Sánchez-González, D. y Osorio-Arjona, J. (2025). Pedestrian Mobility Behaviors of Older People in the Face of Heat Waves in Madrid City. *Urban Science*, 9(7), 236. https://doi.org/10.3390/urbansci9070236
+- Wolf, H., Vierø, A. R. y Szell, M. (2025). CoolWalks for active mobility in urban street networks. *Scientific Reports*, 15, 14911. https://doi.org/10.1038/s41598-025-97200-2
 
 ## Autor
 
