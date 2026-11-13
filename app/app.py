@@ -76,7 +76,7 @@ indice, candidatos, distritos, antes_despues, curva, centros_hexagonos = cargar_
 @st.cache_data
 def cargar_hexagonos():
     """Lee una sola vez los hexágonos con su temperatura, su marca de zona urbana y su distrito."""
-    hexagonos = gpd.read_file(RUTA_CLEAN + "hexagonos_h3.gpkg", columns=["h3", "urbano", "lst"])
+    hexagonos = gpd.read_file(RUTA_CLEAN + "hexagonos_h3.gpkg", columns=["h3", "urbano", "lst", "pct_copa", "pct_edificado"])
     distritos = gpd.read_file(RUTA_CLEAN + "app_distritos.gpkg")
     centroides = gpd.GeoDataFrame(hexagonos[["h3"]], geometry=hexagonos.centroid, crs=hexagonos.crs)
     distrito_hexagono = gpd.sjoin_nearest(centroides, distritos[["NOMBRE", "geometry"]], how="left")
@@ -746,8 +746,24 @@ with tab_centro:
         tarjeta3.metric("Caminable con comodidad", f"{confort_paso:.0f} %",
                         delta=f"{confort_paso - confort_hoy:+.1f} puntos",
                         help="Parte de su entorno de 15 minutos que se puede recorrer sin exceso de calor.")
-    tarjeta4.metric("Sombra de árboles en su entorno", f"{fila['copa_isocrona']:.0f} %",
-                    help="Parte del suelo de su entorno cubierta por copas de árboles, hoy.")
+    AUMENTO_COPA = {"bajo": 5, "moderado": 10, "ambicioso": 20}
+    sombra_hoy = fila["copa_isocrona"]
+    if fase == "hoy":
+        tarjeta4.metric("Sombra de árboles en su entorno", f"{sombra_hoy:.0f} %",
+                        help="Parte del suelo de su entorno cubierta por copas de árboles, hoy.")
+    else:
+        hexagonos_del_centro = centros_hexagonos.loc[centros_hexagonos["codigo"] == codigo_centro, "h3"]
+        hexagonos_entorno = hexagonos[hexagonos["h3"].isin(hexagonos_del_centro)].copy()
+        zonas_del_plan = candidatos.loc[candidatos["elegido"], "h3"]
+        en_zona_plan = hexagonos_entorno["h3"].isin(zonas_del_plan)
+        copa_maxima = 100 - hexagonos_entorno["pct_edificado"]
+        copa_con_plan = (hexagonos_entorno["pct_copa"] + AUMENTO_COPA[fase]).clip(upper=copa_maxima)
+        copa_con_plan = copa_con_plan.clip(lower=hexagonos_entorno["pct_copa"])
+        hexagonos_entorno["copa_fase"] = hexagonos_entorno["pct_copa"].where(~en_zona_plan, copa_con_plan)
+        sombra_paso = hexagonos_entorno["copa_fase"].mean()
+        tarjeta4.metric("Sombra de árboles en su entorno", f"{sombra_paso:.0f} %",
+                        delta=f"{sombra_paso - sombra_hoy:+.1f} puntos",
+                        help="Parte del suelo de su entorno cubierta por copas de árboles con esta fase del plan.")
     tarjeta4.caption(f"media de los centros: {indice['copa_isocrona'].mean():.0f} %")
 
     columna_mapa, columna_derecha = st.columns([3, 2])
